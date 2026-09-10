@@ -63,7 +63,7 @@ require("lazy").setup({
         build = ":TSUpdate",
         config = function()
             require("nvim-treesitter.configs").setup({
-                ensure_installed = { "lua", "go", "typescript", "c", "rust" },
+                ensure_installed = { "lua", "go", "typescript", "c", "rust", "yaml" },
                 auto_install = true,
                 highlight = { enable = true },
                 indent = { enable = true },
@@ -133,7 +133,7 @@ require("lazy").setup({
 
             require("mason").setup({})
             require("mason-lspconfig").setup({
-                ensure_installed = { "rust_analyzer", "gopls", "lua_ls", "ts_ls" },
+                ensure_installed = { "rust_analyzer", "gopls", "lua_ls", "ts_ls", "yamlls" },
                 handlers = {
                     require("lsp-zero").default_setup,
                 },
@@ -243,32 +243,44 @@ require("lazy").setup({
                 mapping = cmp.mapping.preset.insert({
                     ["<C-Space>"] = cmp.mapping.complete(),
                     ["<C-@>"] = cmp.mapping.complete(),
-                    ["<C-y>"] = cmp.mapping.confirm({ select = false }),
                     ["<C-e>"] = cmp.mapping.abort(),
-                    ["<CR>"] = cmp.mapping.confirm({ select = true }),
+                    ["<CR>"] = cmp.mapping(function(fallback)
+                        if cmp.visible() then
+                            cmp.confirm({ select = true })
+                        elseif luasnip.expandable() then
+                            luasnip.expand()
+                        else
+                            fallback()
+                        end
+                    end, { "i", "s" }),
                     ["<C-n>"] = cmp.mapping.select_next_item({ behavior = "insert" }),
                     ["<C-p>"] = cmp.mapping.select_prev_item({ behavior = "insert" }),
                     ["<Down>"] = cmp.mapping.select_next_item({ behavior = "insert" }),
                     ["<Up>"] = cmp.mapping.select_prev_item({ behavior = "insert" }),
                     ["<Tab>"] = cmp.mapping(function(fallback)
-                        if luasnip.expand_or_jumpable() then
-                            luasnip.expand_or_jump()
-                        elseif cmp.visible() then
+                        if cmp.visible() then
                             cmp.select_next_item({ behavior = "insert" })
+                        elseif luasnip.expand_or_jumpable() then
+                            luasnip.expand_or_jump()
                         else
                             fallback()
                         end
                     end, { "i", "s" }),
                     ["<S-Tab>"] = cmp.mapping(function(fallback)
-                        if luasnip.jumpable(-1) then
-                            luasnip.jump(-1)
-                        elseif cmp.visible() then
+                        if cmp.visible() then
                             cmp.select_prev_item({ behavior = "insert" })
+                        elseif luasnip.jumpable(-1) then
+                            luasnip.jump(-1)
                         else
                             fallback()
                         end
                     end, { "i", "s" }),
                 }),
+                completion = {
+                    autocomplete = { cmp.TriggerEvent.TextChanged },
+                    keyword_length = 1,
+                },
+                preselect = cmp.PreselectMode.Item,
                 sources = cmp.config.sources({
                     { name = "nvim_lsp" },
                     { name = "buffer" },

@@ -4,6 +4,16 @@ vim.keymap.set("n", "<leader>pv", vim.cmd.Ex)
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 
+vim.keymap.set("n", "<A-j>", "<cmd>m .+1<CR>==")
+vim.keymap.set("n", "<A-k>", "<cmd>m .-2<CR>==")
+vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv")
+vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv")
+
+vim.keymap.set("n", "<A-Down>", "<cmd>m .+1<CR>==")
+vim.keymap.set("n", "<A-Up>", "<cmd>m .-2<CR>==")
+vim.keymap.set("v", "<A-Down>", ":m '>+1<CR>gv=gv")
+vim.keymap.set("v", "<A-Up>", ":m '<-2<CR>gv=gv")
+
 vim.keymap.set("n", "J", "mzJ`z")
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
 vim.keymap.set("n", "<C-u>", "<C-u>zz")
