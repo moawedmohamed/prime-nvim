@@ -174,9 +174,10 @@ require("lazy").setup({
                 local lines = {}
                 for _, d in ipairs(diags) do
                     local sev = severities[d.severity] or "?"
+                    local msg = d.message:gsub("[\r\n]+", " ")
                     table.insert(lines, string.format(
                         "%s %d:%d  %s",
-                        sev, d.lnum + 1, d.col + 1, d.message
+                        sev, d.lnum + 1, d.col + 1, msg
                     ))
                 end
                 diag_buf = vim.api.nvim_create_buf(false, true)
