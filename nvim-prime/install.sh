@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/moawedmohamed/my-cli-go.git}"
 CONFIG_DIR="${PRIME_CONFIG_DIR:-$HOME/.config/nvim-prime}"
+LOCAL_BIN="$HOME/.local/bin"
 
 echo "== Prime template installer =="
 
@@ -10,7 +11,6 @@ require() {
     command -v "$1" >/dev/null 2>&1 || {
         echo "ABORT: '$1' is not installed."
         case "$1" in
-            nvim) echo "Install Neovim >= 0.10 first (https://github.com/neovim/neovim/releases)." ;;
             git) echo "Install git first." ;;
             unzip) echo "Install unzip first (needed by the plugin manager)." ;;
             curl) echo "Install curl first." ;;
@@ -22,19 +22,78 @@ require() {
 require git
 require unzip
 require curl
-require nvim
 
-NV_VERSION="$(nvim --version | head -1 | sed -E 's/^NVIM v//')"
-if [ -z "$NV_VERSION" ] || ! printf '%s\n' "$NV_VERSION" "0.10.0" | sort -V | head -1 | grep -qx "0.10.0"; then
-    echo "ABORT: Neovim >= 0.10 required (found: $(nvim --version | head -1))."
-    exit 1
-fi
-echo "  Neovim: $(nvim --version | head -1)"
-echo "  Target: $CONFIG_DIR"
+nvim_version() {
+    if command -v nvim >/dev/null 2>&1; then
+        nvim --version | head -1 | sed -E 's/^NVIM v//'
+    fi
+}
 
-echo "[1/4] Downloading prime template..."
+have_good_nvim() {
+    local v
+    v="$(nvim_version)"
+    [ -n "$v" ] && printf '%s\n' "$v" "0.10.0" | sort -V | head -1 | grep -qx "0.10.0"
+}
+
+ensure_nvim() {
+    if have_good_nvim; then
+        echo "  Neovim: $(nvim --version | head -1) (OK)"
+        return 0
+    fi
+
+    if command -v nvim >/dev/null 2>&1; then
+        echo "  Found old Neovim: $(nvim --version | head -1) (< 0.10). Upgrading..."
+    else
+        echo "  Neovim not found. Installing..."
+    fi
+
+    case "$(uname -s)" in
+        Darwin)
+            if command -v brew >/dev/null 2>&1; then
+                echo "  Installing via Homebrew..."
+                brew install neovim
+            else
+                echo "ABORT: install Homebrew first (https://brew.sh) or install Neovim manually."
+                exit 1
+            fi
+            ;;
+        Linux)
+            local arch asset
+            case "$(uname -m)" in
+                x86_64|amd64) arch="x86_64" ;;
+                aarch64|arm64) arch="arm64" ;;
+                *) echo "ABORT: unsupported architecture: $(uname -m). Install Neovim manually."; exit 1 ;;
+            esac
+            asset="nvim-linux-${arch}.tar.gz"
+            echo "  Downloading $asset from GitHub (latest release)..."
+            curl -fL -o "$TMP/nvim.tar.gz" \
+                "https://github.com/neovim/neovim/releases/latest/download/$asset"
+            mkdir -p "$HOME/.local/opt"
+            tar -C "$HOME/.local/opt" -xzf "$TMP/nvim.tar.gz"
+            mkdir -p "$LOCAL_BIN"
+            rm -f "$LOCAL_BIN/nvim"
+            ln -sf "$HOME/.local/opt"/nvim-linux-*/bin/nvim "$LOCAL_BIN/nvim"
+            echo "  Installed Neovim to $LOCAL_BIN/nvim"
+            ;;
+        *)
+            echo "ABORT: unsupported OS ($(uname -s)). Install Neovim >= 0.10 manually."
+            exit 1
+            ;;
+    esac
+
+    if ! have_good_nvim; then
+        echo "ABORT: Neovim install failed or still too old."
+        exit 1
+    fi
+    echo "  Neovim: $(nvim --version | head -1) (OK)"
+}
+
+echo "[0/4] Making sure Neovim is installed..."
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
+ensure_nvim
+
+echo "[1/4] Downloading prime template..."
 git clone --depth 1 "$REPO_URL" "$TMP/repo" 2>/dev/null || {
     echo "ABORT: failed to clone $REPO_URL (offline or wrong URL?)."
     exit 1
@@ -53,9 +112,15 @@ mkdir -p "$(dirname "$CONFIG_DIR")"
 cp -r "$TMP/repo/nvim-prime" "$CONFIG_DIR"
 echo "  installed to $CONFIG_DIR"
 
-echo "[4/4] Adding 'prime' alias..."
+echo "[4/4] Adding 'prime' alias and PATH entry..."
 for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
     if [ -f "$rc" ]; then
+        if [ "$LOCAL_BIN" != "/usr/local/bin" ] && [ "$LOCAL_BIN" != "/usr/bin" ]; then
+            if ! grep -qs "PATH=.*$HOME/.local/bin" "$rc"; then
+                printf '%s\n' 'export PATH="$HOME/.local/bin:$PATH"' >> "$rc"
+                echo "  PATH entry added to $rc"
+            fi
+        fi
         if ! grep -qs 'alias prime=' "$rc"; then
             printf '%s\n' 'alias prime='"'"'NVIM_APPNAME="nvim-prime" nvim'"'"'' >> "$rc"
             echo "  alias added to $rc (open a new terminal or run: source $rc)"
