@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/moawedmohamed/my-cli-go.git}"
+REPO_URL="${REPO_URL:-https://github.com/moawedmohamed/prime-nvim.git}"
 CONFIG_DIR="${PRIME_CONFIG_DIR:-$HOME/.config/nvim-prime}"
 LOCAL_BIN="$HOME/.local/bin"
 
