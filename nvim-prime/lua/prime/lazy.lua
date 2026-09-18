@@ -136,6 +136,16 @@ require("lazy").setup({
                 ensure_installed = { "rust_analyzer", "gopls", "lua_ls", "ts_ls", "yamlls" },
                 handlers = {
                     require("lsp-zero").default_setup,
+                    gopls = function()
+                        require("lsp-zero").configure("gopls", {
+                            settings = {
+                                gopls = {
+                                    usePlaceholders = true,
+                                    staticcheck = true,
+                                },
+                            },
+                        })
+                    end,
                 },
             })
 
@@ -224,6 +234,15 @@ require("lazy").setup({
                     local clients = vim.lsp.get_clients({ bufnr = 0 })
                     if vim.bo.modifiable and next(clients) ~= nil then
                         vim.lsp.buf.format({ bufnr = 0, async = false })
+                        if vim.bo.filetype == "go" then
+                            pcall(vim.lsp.buf.code_action, {
+                                context = {
+                                    only = { "source.organizeImports" },
+                                    diagnostics = {},
+                                },
+                                apply = true,
+                            })
+                        end
                     end
                 end,
             })
