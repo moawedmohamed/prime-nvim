@@ -235,6 +235,8 @@ require("lazy").setup({
                 paths = vim.fn.stdpath("config") .. "/lua/prime/snippets",
             })
 
+            vim.opt.completeopt = { "menu", "menuone", "noselect" }
+
             cmp.setup({
                 snippet = {
                     expand = function(args)
