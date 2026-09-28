@@ -41,6 +41,9 @@ It bundles everything you need out of the box:
 - `git`, `curl`, `unzip`
 - A terminal emulator that supports TrueColor (e.g. GNOME Terminal, kitty, wezterm)
 
+> **Remote / headless machines:** the clipboard works there too — see
+> [Clipboard](#clipboard) below. No extra setup required.
+
 ## Installation
 
 ### One-liner (recommended)
@@ -102,6 +105,38 @@ NVIM_APPNAME="nvim-prime" nvim --headless "+Lazy sync" +qa
 Servers are installed via Mason. Run `:Mason` inside the template, press <kbd>i</kbd>,
 and install the server you need for each language (gopls, lua-language-server,
 rust-analyzer, typescript-language-server, ...).
+</details>
+
+## Clipboard
+
+The editing keymaps (`<C-c>`, `<C-x>`, `<C-v>`, `<space> y`, `<space> Y`) all target
+the `"+` register, so they need a working system clipboard. `prime-nvim` picks a
+provider automatically at startup:
+
+| Environment | Provider | How it works |
+|---|---|---|
+| Wayland | `wl-clipboard` | native |
+| X11 with `xclip`/`xsel` | `xclip` | native |
+| **No display server** (SSH box, container, headless VM) | **OSC 52** | nvim base64-encodes the text into an escape sequence; your **local** terminal writes it to your real desktop clipboard |
+
+Run `:PrimeClipboard` to see which one is active and why.
+
+<details>
+<summary><strong>Why this needs special handling</strong></summary>
+
+On a machine with no X11 and no Wayland, `xclip`/`wl-copy` cannot reach any display
+server, and Neovim fails **silently** — the keymaps look like they work, the text just
+never leaves Neovim. That is the most confusing nvim-on-a-remote bug there is, because
+nothing errors.
+
+Two caveats for the OSC 52 path:
+
+- **tmux must be ≥ 3.2.** Older tmux swallows the sequence. Either run nvim outside
+  tmux, or upgrade tmux and add `set -g set-clipboard on` to your `tmux.conf`.
+  `:PrimeClipboard` warns you when this applies.
+- **Pasting** (`"+p`) needs a terminal that allows OSC 52 *reads*, which many block by
+  default. Yanking always works; if `"+p` comes up empty, use your terminal's own
+  `Ctrl+Shift+V`.
 </details>
 
 ## Keybindings
@@ -167,6 +202,7 @@ nvim-prime/
 ├── lazy-lock.json        # pinned plugin versions
 ├── install.sh            # one-click installer
 └── lua/prime/
+    ├── clipboard.lua      # clipboard provider (native or OSC 52 on headless)
     ├── set.lua           # options (numbers, tabs, autosave, undo)
     ├── remap.lua         # keymaps  (leader = space)
     ├── lazy.lua          # plugins, LSP, completion, diagnostics
