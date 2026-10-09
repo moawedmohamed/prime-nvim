@@ -32,6 +32,7 @@ It bundles everything you need out of the box:
 | 🔎 **Telescope** fuzzy finder | 📍 **Harpoon** quick file marks |
 | ⏪ **Undotree** visual undo | 🌿 **Fugitive** Git integration |
 | 📊 **Lualine** status bar | ✅ Diagnostics panel |
+| 🔄 One-command `prime update` | 🔔 Update-available warning |
 
 > Snippets are included for **Go, TypeScript/React, C/C++, Rust, Lua, and Python** — type `if`, `for`, `while`, `func` (or `fn`/`function`/`def`) and press `Enter` for a full construct with placeholders you can jump through with `Tab`.
 
@@ -49,43 +50,65 @@ It bundles everything you need out of the box:
 ### One-liner (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/moawedmohamed/prime-nvim/main/nvim-prime/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/moawedmohamed/prime-nvim/main/install.sh | bash
 ```
 
 The script:
 
 1. **Installs Neovim** automatically if it's missing or older than 0.10
    (Linux → official release from GitHub; macOS → Homebrew)
-2. Downloads this template into `~/.config/nvim-prime`
+2. **`git clone`s** this template into `~/.config/nvim-prime`
    (backing up any existing `nvim-prime` config first)
-3. Adds a `prime` shell alias and ensures `~/.local/bin` is on your `PATH`
+3. Installs the `prime` launcher into `~/.local/bin` and ensures it's on your `PATH`
 4. Installs all plugins on first start
+
+Because the config directory is a real git checkout, `prime update` can pull
+future changes **without wiping your own edits**.
 
 ### Manual installation
 
 ```bash
-git clone --depth 1 https://github.com/moawedmohamed/prime-nvim.git
-cp -r prime-nvim/nvim-prime ~/.config/nvim-prime
+git clone https://github.com/moawedmohamed/prime-nvim.git ~/.config/nvim-prime
+ln -sf ~/.config/nvim-prime/bin/prime ~/.local/bin/prime   # ensure ~/.local/bin is on PATH
 # start it once to fetch plugins
-NVIM_APPNAME="nvim-prime" nvim "+Lazy sync" +qa
+NVIM_APPNAME="nvim-prime" nvim "+Lazy! sync" +qa
 ```
 
 ### Update
 
 ```bash
-rm -rf ~/.config/nvim-prime
-curl -fsSL https://raw.githubusercontent.com/moawedmohamed/prime-nvim/main/nvim-prime/install.sh | bash
+prime update        # git pull + plugin sync
 ```
+
+`prime update` fast-forwards `~/.config/nvim-prime` to the latest `main`, then
+runs `:Lazy sync` for you. If you have local edits, commit them first (or use
+`git -C ~/.config/nvim-prime pull --rebase`) so the fast-forward applies cleanly.
+
+**Update warnings** — when a newer version is published, `prime-nvim` notices on
+startup and warns:
+
+```
+prime-nvim update available: 1.1.0 -> 1.2.0
+Run `prime update` (or :PrimeUpdate) to upgrade.
+```
+
+The check is async, has a short timeout, and runs at most once a day. Disable it
+with `export PRIME_NO_UPDATE_CHECK=1`. You can also update from inside Neovim
+with `:PrimeUpdate` and check the current build with `:PrimeVersion`.
 
 ## Usage
 
-Launch the template with either:
+Launch the template with `prime`:
 
 ```bash
-prime
+prime                 # launch the template (leader = Space)
+prime update          # pull the latest template + sync plugins
+prime version         # print the installed version
+prime doctor          # show paths + git state (handy in bug reports)
+prime help            # show all commands
 ```
 
-or
+Without the launcher it's just:
 
 ```bash
 NVIM_APPNAME="nvim-prime" nvim
@@ -197,16 +220,19 @@ Two caveats for the OSC 52 path:
 ## Project layout
 
 ```
-nvim-prime/
-├── init.lua              # entry point
-├── lazy-lock.json        # pinned plugin versions
-├── install.sh            # one-click installer
+prime-nvim/                 # cloned to ~/.config/nvim-prime
+├── init.lua                # entry point
+├── VERSION                 # semver, drives the update warning
+├── lazy-lock.json          # pinned plugin versions
+├── install.sh              # one-click installer
+├── bin/prime               # launcher + `prime update`
 └── lua/prime/
-    ├── clipboard.lua      # clipboard provider (native or OSC 52 on headless)
-    ├── set.lua           # options (numbers, tabs, autosave, undo)
-    ├── remap.lua         # keymaps  (leader = space)
-    ├── lazy.lua          # plugins, LSP, completion, diagnostics
-    └── snippets/         # LuaSnip snippets per language
+    ├── clipboard.lua       # clipboard provider (native or OSC 52 on headless)
+    ├── update.lua          # update check + :PrimeUpdate / :PrimeVersion
+    ├── set.lua             # options (numbers, tabs, autosave, undo)
+    ├── remap.lua           # keymaps  (leader = space)
+    ├── lazy.lua            # plugins, LSP, completion, diagnostics
+    └── snippets/           # LuaSnip snippets per language
         ├── go.lua  typescript.lua  typescriptreact.lua
         ├── c.lua   cpp.lua  rust.lua  lua.lua  python.lua
 ```

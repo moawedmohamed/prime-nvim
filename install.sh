@@ -93,49 +93,42 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 ensure_nvim
 
-echo "[1/4] Downloading prime template..."
-git clone --depth 1 "$REPO_URL" "$TMP/repo" 2>/dev/null || {
-    echo "ABORT: failed to clone $REPO_URL (offline or wrong URL?)."
-    exit 1
-}
-
-echo "[2/4] Backing up any existing config..."
+echo "[1/4] Backing up any existing config..."
 if [ -d "$CONFIG_DIR" ]; then
     BACKUP="$CONFIG_DIR.backup-$(date +%Y%m%d-%H%M%S)"
     mv "$CONFIG_DIR" "$BACKUP"
     echo "  backed up to $BACKUP"
 fi
 
-echo "[3/4] Installing config..."
-[ -n "$CONFIG_DIR" ] || { echo "ABORT: empty install target."; exit 1; }
+echo "[2/4] Downloading prime template (git clone)..."
 mkdir -p "$(dirname "$CONFIG_DIR")"
-cp -r "$TMP/repo/nvim-prime" "$CONFIG_DIR"
+git clone "$REPO_URL" "$CONFIG_DIR"
 echo "  installed to $CONFIG_DIR"
 
-echo "[4/4] Adding 'prime' alias and PATH entry..."
+echo "[3/4] Installing 'prime' launcher and PATH entry..."
+mkdir -p "$LOCAL_BIN"
+ln -sf "$CONFIG_DIR/bin/prime" "$LOCAL_BIN/prime"
+chmod +x "$CONFIG_DIR/bin/prime" "$LOCAL_BIN/prime"
 for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    if [ -f "$rc" ]; then
-        if [ "$LOCAL_BIN" != "/usr/local/bin" ] && [ "$LOCAL_BIN" != "/usr/bin" ]; then
-            if ! grep -qs "PATH=.*$HOME/.local/bin" "$rc"; then
-                printf '%s\n' 'export PATH="$HOME/.local/bin:$PATH"' >> "$rc"
-                echo "  PATH entry added to $rc"
-            fi
+    [ -f "$rc" ] || continue
+    if [ "$LOCAL_BIN" != "/usr/local/bin" ] && [ "$LOCAL_BIN" != "/usr/bin" ]; then
+        if ! grep -qs "PATH=.*$HOME/.local/bin" "$rc"; then
+            printf '%s\n' 'export PATH="$HOME/.local/bin:$PATH"' >> "$rc"
+            echo "  PATH entry added to $rc"
         fi
-        if ! grep -qs 'alias prime=' "$rc"; then
-            printf '%s\n' 'alias prime='"'"'NVIM_APPNAME="nvim-prime" nvim'"'"'' >> "$rc"
-            echo "  alias added to $rc (open a new terminal or run: source $rc)"
-        fi
+    fi
+    if grep -qs 'alias prime=' "$rc"; then
+        sed -i.bak '/alias prime=/d' "$rc" && rm -f "$rc.bak"
+        echo "  removed old 'alias prime=' from $rc (a launcher script is used now)"
     fi
 done
 
+echo "[4/4] Installing plugins on first start (one-time, may take a while)..."
 if [ "${PRIME_SKIP_PLUGINS:-}" != "1" ]; then
-    echo "[done] Installing plugins on first start (one-time, may take a while)..."
-    nvim --headless "+Lazy sync" +qa || true
+    NVIM_APPNAME="nvim-prime" nvim --headless "+Lazy! sync" +qa || true
     echo "  plugins installed"
 fi
 
 echo
-echo "Done! Start your template with:"
-echo "    prime"
-echo "or"
-echo "    NVIM_APPNAME=nvim-prime nvim"
+echo "Done! Start your template with:  prime"
+echo "Update it later with:            prime update"

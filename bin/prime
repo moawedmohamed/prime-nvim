@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# prime-nvim launcher: run the template and manage updates.
+set -euo pipefail
+
+CONFIG_DIR="${PRIME_CONFIG_DIR:-$HOME/.config/nvim-prime}"
+REPO_URL="${PRIME_REPO_URL:-https://github.com/moawedmohamed/prime-nvim.git}"
+
+usage() {
+    cat <<'EOF'
+prime-nvim launcher
+
+Usage:
+  prime [nvim args...]   Launch the template (default)
+  prime update           Pull the latest template and sync plugins
+  prime version          Print the installed template version
+  prime doctor           Show install paths and git state
+  prime help             Show this help
+EOF
+}
+
+case "${1:-}" in
+    help | -h | --help)
+        usage
+        ;;
+    version | -v | --version)
+        cat "$CONFIG_DIR/VERSION" 2>/dev/null || echo "unknown"
+        ;;
+    update)
+        if [ ! -d "$CONFIG_DIR/.git" ]; then
+            echo "prime-nvim is not a git checkout: $CONFIG_DIR"
+            echo "Reinstall it, or: git clone $REPO_URL \"$CONFIG_DIR\""
+            exit 1
+        fi
+        echo "==> Checking for updates..."
+        git -C "$CONFIG_DIR" fetch --quiet origin main
+        before="$(git -C "$CONFIG_DIR" rev-parse HEAD)"
+        remote="$(git -C "$CONFIG_DIR" rev-parse origin/main)"
+        if [ "$before" = "$remote" ]; then
+            echo "Already up to date ($before)."
+        else
+            echo "==> Updating template..."
+            git -C "$CONFIG_DIR" pull --ff-only
+        fi
+        echo "==> Syncing plugins..."
+        NVIM_APPNAME="nvim-prime" nvim --headless "+Lazy! sync" +qa || true
+        echo "Done. Restart 'prime' to use the new version."
+        ;;
+    doctor)
+        echo "config dir : $CONFIG_DIR"
+        echo "version    : $(cat "$CONFIG_DIR/VERSION" 2>/dev/null || echo unknown)"
+        if [ -d "$CONFIG_DIR/.git" ]; then
+            echo "commit     : $(git -C "$CONFIG_DIR" rev-parse --short HEAD)"
+            git -C "$CONFIG_DIR" status --short || true
+        else
+            echo "git        : not a checkout (snapshot install)"
+        fi
+        ;;
+    "")
+        NVIM_APPNAME="nvim-prime" exec nvim
+        ;;
+    *)
+        NVIM_APPNAME="nvim-prime" exec nvim "$@"
+        ;;
+esac
