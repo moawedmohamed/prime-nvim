@@ -1,7 +1,16 @@
 vim.g.mapleader = " "
-vim.keymap.set("n", "<leader>pv", vim.cmd.Ex)
-
+vim.keymap.set("n", "<leader>vt", "<cmd>botright vsplit | terminal<CR>", { desc = "Open vertical terminal on right" })
+-- Open a horizontal terminal split at the bottom
+vim.keymap.set("n", "<leader>ht", "<cmd>botright split | terminal<CR>", { desc = "Open horizontal terminal at bottom" })
+-- Easily escape terminal mode using Esc Esc
+vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+vim.keymap.set("n", "<leader>pv", vim.cmd.Vex)
+vim.keymap.set("n", "<C-j>", "<cmd>cnext<CR>")
+vim.keymap.set("n", "<C-k>", "<cmd>cprev<CR>")
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
+vim.keymap.set("n", "<leader>wq", "<cmd>wq<CR>", { desc = "Save and quit" })
+vim.keymap.set("n", "<leader>q", "<cmd>q!<CR>", { desc = "Save and quit" })
+vim.keymap.set("n", "<leader><CR>", "<cmd>source %<CR>")
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 
 vim.keymap.set("n", "<A-j>", "<cmd>m .+1<CR>==")
