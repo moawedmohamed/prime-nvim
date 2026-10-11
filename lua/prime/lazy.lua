@@ -133,7 +133,23 @@ require("lazy").setup({
 
             require("mason").setup({})
             require("mason-lspconfig").setup({
-                ensure_installed = { "rust_analyzer", "gopls", "lua_ls", "ts_ls", "yamlls" },
+                ensure_installed = {
+                    -- Go
+                    "gopls",
+                    -- frontend / web
+                    "ts_ls",
+                    "html",
+                    "cssls",
+                    "tailwindcss",
+                    "eslint",
+                    "jsonls",
+                    "emmet_language_server",
+                    "prismals",
+                    -- others
+                    "lua_ls",
+                    "rust_analyzer",
+                    "yamlls",
+                },
                 handlers = {
                     require("lsp-zero").default_setup,
                     gopls = function()
@@ -142,6 +158,31 @@ require("lazy").setup({
                                 gopls = {
                                     usePlaceholders = true,
                                     staticcheck = true,
+                                    completeUnimported = true,
+                                    gofumpt = true,
+                                    codelenses = {
+                                        gc_details = false,
+                                        generate = true,
+                                        regenerate_cgo = true,
+                                        run_govulncheck = true,
+                                        test = true,
+                                        tidy = true,
+                                        upgrade_dependency = true,
+                                        vendor = true,
+                                    },
+                                    hints = {
+                                        assignVariableTypes = true,
+                                        compositeLiteralFields = true,
+                                        compositeLiteralTypes = true,
+                                        constantValues = true,
+                                        functionTypeParameters = true,
+                                        parameterNames = true,
+                                        rangeVariableTypes = true,
+                                    },
+                                    analyses = {
+                                        unusedparams = true,
+                                        shadow = true,
+                                    },
                                 },
                             },
                         })
@@ -154,11 +195,68 @@ require("lazy").setup({
                 local opts = { buffer = bufnr }
                 vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
                 vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+                vim.keymap.set("n", "gK", vim.lsp.buf.signature_help, { buffer = bufnr, desc = "Signature help" })
                 vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
                 vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
+                vim.keymap.set("n", "<leader>ds", vim.lsp.buf.document_symbol, { buffer = bufnr, desc = "Document symbols" })
+                vim.keymap.set("n", "<leader>ws", vim.lsp.buf.workspace_symbol, { buffer = bufnr, desc = "Workspace symbols" })
             end)
 
             lsp.setup()
+
+            -- Diagnostics: inline virtual text, coloured underline, signs and
+            -- a rounded floating window. update_in_insert = false keeps the
+            -- buffer calm while typing.
+            vim.diagnostic.config({
+                virtual_text = {
+                    prefix = "●",
+                    source = "if_many",
+                    spacing = 2,
+                },
+                underline = true,
+                signs = {
+                    text = {
+                        [vim.diagnostic.severity.ERROR] = "E",
+                        [vim.diagnostic.severity.WARN] = "W",
+                        [vim.diagnostic.severity.INFO] = "I",
+                        [vim.diagnostic.severity.HINT] = "H",
+                    },
+                },
+                severity_sort = true,
+                update_in_insert = false,
+                float = {
+                    border = "rounded",
+                    source = true,
+                    header = "",
+                    prefix = "",
+                },
+            })
+
+            -- NOTE: the 'd' prefix is intentionally avoided here -- remap.lua
+            -- maps <leader>d to the delete operator, so a paused <leader>d
+            -- would start deleting instead of waiting for a diagnostic key.
+            local function diag_goto(count)
+                if #vim.diagnostic.get(0) == 0 then
+                    vim.notify("No diagnostics in this buffer", vim.log.levels.INFO)
+                    return
+                end
+                vim.diagnostic.jump({ count = count, float = true })
+            end
+
+            vim.keymap.set("n", "gj", function()
+                diag_goto(1)
+            end, { desc = "Next diagnostic" })
+            vim.keymap.set("n", "gk", function()
+                diag_goto(-1)
+            end, { desc = "Previous diagnostic" })
+            vim.keymap.set("n", "<leader>cd", function()
+                local line = vim.api.nvim_win_get_cursor(0)[1] - 1
+                if #vim.diagnostic.get(0, { lnum = line }) == 0 then
+                    vim.notify("No diagnostic on this line", vim.log.levels.INFO)
+                else
+                    vim.diagnostic.open_float()
+                end
+            end, { desc = "Show diagnostic (float)" })
 
             local diag_win = nil
             local diag_buf = nil
@@ -311,5 +409,58 @@ require("lazy").setup({
                 }),
             })
         end
+    },
+
+    {
+        "lewis6991/gitsigns.nvim",
+        event = { "BufReadPre", "BufNewFile" },
+        config = function()
+            local gs = require("gitsigns")
+            gs.setup({
+                signs = {
+                    add = { text = "▎" },
+                    change = { text = "▎" },
+                    delete = { text = "▁" },
+                    topdelete = { text = "▔" },
+                    changedelete = { text = "▎" },
+                },
+                on_attach = function(bufnr)
+                    local function map(mode, lhs, rhs, desc)
+                        vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+                    end
+                    map("n", "<leader>hn", gs.next_hunk, "Next git hunk")
+                    map("n", "<leader>hp", gs.prev_hunk, "Previous git hunk")
+                    map("n", "<leader>hb", function() gs.blame_line({ full = true }) end, "Blame line")
+                    map("n", "<leader>hv", gs.preview_hunk, "Preview git hunk")
+                    map("n", "<leader>hs", gs.stage_hunk, "Stage git hunk")
+                    map("n", "<leader>hr", gs.reset_hunk, "Reset git hunk")
+                    map("n", "<leader>hu", gs.undo_stage_hunk, "Undo stage hunk")
+                    map("n", "<leader>hd", gs.diffthis, "Diff this file")
+                end,
+            })
+        end,
+    },
+
+    {
+        "numToStr/Comment.nvim",
+        event = { "BufReadPost", "BufNewFile" },
+        config = function()
+            require("Comment").setup()
+        end,
+    },
+
+    {
+        "folke/which-key.nvim",
+        event = "VeryLazy",
+        config = function()
+            local wk = require("which-key")
+            wk.setup({})
+            wk.add({
+                { "gj", desc = "Next diagnostic" },
+                { "gk", desc = "Previous diagnostic" },
+                { "<leader>v", group = "lsp" },
+                { "<leader>h", group = "hunks / terminal" },
+            })
+        end,
     },
 })

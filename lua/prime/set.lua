@@ -31,6 +31,10 @@ opt.isfname:append("@-@")
 
 opt.updatetime = 50
 
+-- time to type the next key of a leader sequence before Neovim gives up
+opt.timeoutlen = 1000
+opt.ttimeoutlen = 10
+
 opt.whichwrap:append("<,>")
 
 opt.autowriteall = true
