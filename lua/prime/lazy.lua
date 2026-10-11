@@ -145,6 +145,9 @@ require("lazy").setup({
                     "jsonls",
                     "emmet_language_server",
                     "prismals",
+                    -- devops
+                    "dockerls",
+                    "docker_compose_language_service",
                     -- others
                     "lua_ls",
                     "rust_analyzer",
@@ -187,6 +190,38 @@ require("lazy").setup({
                             },
                         })
                     end,
+                    yamlls = function()
+                        require("lsp-zero").configure("yamlls", {
+                            settings = {
+                                yaml = {
+                                    schemas = {
+                                        ["https://json.schemastore.org/github-workflow.json"] = ".github/workflows/*.{yml,yaml}",
+                                        ["https://json.schemastore.org/github-action.json"] = ".github/actions/*.{yml,yaml}",
+                                        ["https://json.schemastore.org/docker-compose.json"] = "docker-compose*.{yml,yaml}",
+                                        ["https://json.schemastore.org/kustomization.json"] = "kustomization.{yml,yaml}",
+                                        ["https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.29.0-standalone-strict/all.json"] = {
+                                            "*.k8s.yaml",
+                                            "*.k8s.yml",
+                                        },
+                                    },
+                                    format = {
+                                        enable = true,
+                                    },
+                                },
+                            },
+                        })
+                    end,
+                    dockerls = function()
+                        require("lsp-zero").configure("dockerls", {
+                            settings = {
+                                docker = {
+                                    languages = {
+                                        dockerfile = { enabled = true },
+                                    },
+                                },
+                            },
+                        })
+                    end,
                 },
             })
 
@@ -203,6 +238,20 @@ require("lazy").setup({
             end)
 
             lsp.setup()
+
+            -- docker-compose files use the dedicated compose language server,
+            -- which only starts for the custom 'yaml.docker-compose' filetype.
+            vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+                pattern = {
+                    "docker-compose*.yaml",
+                    "docker-compose*.yml",
+                    "compose*.yaml",
+                    "compose*.yml",
+                },
+                callback = function()
+                    vim.bo.filetype = "yaml.docker-compose"
+                end,
+            })
 
             -- Diagnostics: inline virtual text, coloured underline, signs and
             -- a rounded floating window. update_in_insert = false keeps the
