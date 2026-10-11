@@ -30,8 +30,9 @@ It bundles everything you need out of the box:
 | 🚀 **lazy.nvim** plugin manager | 🧠 **lsp-zero v3** + **Mason** LSP servers |
 | ⚡ **nvim-cmp** autocompletion | 🔤 **LuaSnip** code snippets |
 | 🔎 **Telescope** fuzzy finder | 📍 **Harpoon** quick file marks |
-| ⏪ **Undotree** visual undo | 🌿 **Fugitive** Git integration |
-| 📊 **Lualine** status bar | ✅ Diagnostics panel |
+| ⏪ **Undotree** visual undo | 🌿 **Fugitive** + **gitsigns** Git |
+| 📊 **Lualine** status bar | ✅ Inline diagnostics + signs |
+| 💬 **Comment.nvim** (`gcc`) | ⌨️ **which-key** key hints |
 | 🔄 One-command `prime update` | 🔔 Update-available warning |
 
 > Snippets are included for **Go, TypeScript/React, C/C++, Rust, Lua, and Python** — type `if`, `for`, `while`, `func` (or `fn`/`function`/`def`) and press `Enter` for a full construct with placeholders you can jump through with `Tab`.
@@ -198,11 +199,18 @@ Two caveats for the OSC 52 path:
 ### Code intelligence
 | Keys | Action |
 |---|---|
-| `gd` | Go to definition |
+| `gd` / `gD` | Go to definition / declaration |
+| `gi` / `go` | Go to implementation / type definition |
+| `gr` | References |
+| `gK` | Signature help |
 | `K` | Hover documentation |
+| `<space> ds` / `<space> ws` | Document / workspace symbols |
 | `<space> vca` | Code actions |
 | `<space> vrn` | Rename symbol |
+| `gj` / `gk` | Next / previous diagnostic |
+| `<space> cd` | Diagnostic under cursor (float) |
 | `<space> xx` | Diagnostics panel |
+| `<C-o>` / `<C-z>` | Jump back from definition |
 | `<C-k>` `<C-j>` | Next / previous quickfix |
 | `<space> k` `<space> j` | Next / previous location list |
 
@@ -215,7 +223,18 @@ Two caveats for the OSC 52 path:
 | Keys | Action |
 |---|---|
 | `<space> gs` | Git status (Fugitive) |
+| `<space> hn` / `<space> hp` | Next / previous git hunk |
+| `<space> hv` | Preview hunk |
+| `<space> hs` / `<space> hr` | Stage / reset hunk |
+| `<space> hu` | Undo last stage |
+| `<space> hb` | Blame line |
+| `<space> hd` | Diff this file |
 | `<space> u` | Undo tree |
+
+> The vertical bar in the sign column is **gitsigns** — added/changed/deleted
+> lines relative to the last commit. Stage a single change with `<space> hs`, or
+> select several files in the `:Git` status window (`<space> gs`) with `V` and
+> press `s`, then `cc` to commit.
 
 ## Project layout
 
