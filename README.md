@@ -27,7 +27,7 @@ It bundles everything you need out of the box:
 | | |
 |---|---|
 | 🎨 **rose-pine** theme (moon variant) | ✨ **Treesitter** syntax highlighting |
-| 🚀 **lazy.nvim** plugin manager | 🧠 **lsp-zero v3** + **Mason** LSP servers |
+| 🚀 **lazy.nvim** plugin manager | 🧠 **lsp-zero v3** + **Mason** (Go, web, DevOps) |
 | ⚡ **nvim-cmp** autocompletion | 🔤 **LuaSnip** code snippets |
 | 🔎 **Telescope** fuzzy finder | 📍 **Harpoon** quick file marks |
 | ⏪ **Undotree** visual undo | 🌿 **Fugitive** + **gitsigns** Git |
