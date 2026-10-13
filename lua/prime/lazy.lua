@@ -119,7 +119,7 @@ require("lazy").setup({
             "williamboman/mason.nvim",
             "williamboman/mason-lspconfig.nvim",
             "neovim/nvim-lspconfig",
-            "hrsh7th/nvim-cmp",
+            { "hrsh7th/nvim-cmp", commit = "7d850f3" },
             "hrsh7th/cmp-nvim-lsp",
             "hrsh7th/cmp-buffer",
             "hrsh7th/cmp-path",
@@ -153,75 +153,77 @@ require("lazy").setup({
                     "rust_analyzer",
                     "yamlls",
                 },
-                handlers = {
-                    require("lsp-zero").default_setup,
-                    gopls = function()
-                        require("lsp-zero").configure("gopls", {
-                            settings = {
-                                gopls = {
-                                    usePlaceholders = true,
-                                    staticcheck = true,
-                                    completeUnimported = true,
-                                    gofumpt = true,
-                                    codelenses = {
-                                        gc_details = false,
-                                        generate = true,
-                                        regenerate_cgo = true,
-                                        run_govulncheck = true,
-                                        test = true,
-                                        tidy = true,
-                                        upgrade_dependency = true,
-                                        vendor = true,
-                                    },
-                                    hints = {
-                                        assignVariableTypes = true,
-                                        compositeLiteralFields = true,
-                                        compositeLiteralTypes = true,
-                                        constantValues = true,
-                                        functionTypeParameters = true,
-                                        parameterNames = true,
-                                        rangeVariableTypes = true,
-                                    },
-                                    analyses = {
-                                        unusedparams = true,
-                                        shadow = true,
-                                    },
-                                },
+            })
+
+            -- nvim 0.12: per-server settings are applied with vim.lsp.config.
+            -- (mason-lspconfig here enables servers via vim.lsp.enable; the old
+            -- lsp-zero "handlers" table is ignored, so settings must go here.)
+            vim.lsp.config("*", {
+                capabilities = require("cmp_nvim_lsp").default_capabilities(),
+            })
+
+            vim.lsp.config("gopls", {
+                settings = {
+                    gopls = {
+                        usePlaceholders = true,
+                        staticcheck = true,
+                        completeUnimported = true,
+                        gofumpt = true,
+                        codelenses = {
+                            gc_details = false,
+                            generate = true,
+                            regenerate_cgo = true,
+                            run_govulncheck = true,
+                            test = true,
+                            tidy = true,
+                            upgrade_dependency = true,
+                            vendor = true,
+                        },
+                        hints = {
+                            assignVariableTypes = true,
+                            compositeLiteralFields = true,
+                            compositeLiteralTypes = true,
+                            constantValues = true,
+                            functionTypeParameters = true,
+                            parameterNames = true,
+                            rangeVariableTypes = true,
+                        },
+                        analyses = {
+                            unusedparams = true,
+                            shadow = true,
+                        },
+                    },
+                },
+            })
+
+            vim.lsp.config("yamlls", {
+                settings = {
+                    yaml = {
+                        schemas = {
+                            ["https://www.schemastore.org/github-workflow.json"] = ".github/workflows/*.{yml,yaml}",
+                            ["https://www.schemastore.org/github-action.json"] = ".github/actions/*.{yml,yaml}",
+                            ["https://raw.githubusercontent.com/compose-spec/compose-go/master/schema/compose-spec.json"] =
+                            "*compose*.{yml,yaml}",
+                            ["https://www.schemastore.org/kustomization.json"] = "kustomization.{yml,yaml}",
+                            ["https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.30.0-standalone-strict/all.json"] = {
+                                "*.k8s.yaml",
+                                "*.k8s.yml",
                             },
-                        })
-                    end,
-                    yamlls = function()
-                        require("lsp-zero").configure("yamlls", {
-                            settings = {
-                                yaml = {
-                                    schemas = {
-                                        ["https://json.schemastore.org/github-workflow.json"] = ".github/workflows/*.{yml,yaml}",
-                                        ["https://json.schemastore.org/github-action.json"] = ".github/actions/*.{yml,yaml}",
-                                        ["https://json.schemastore.org/docker-compose.json"] = "docker-compose*.{yml,yaml}",
-                                        ["https://json.schemastore.org/kustomization.json"] = "kustomization.{yml,yaml}",
-                                        ["https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.29.0-standalone-strict/all.json"] = {
-                                            "*.k8s.yaml",
-                                            "*.k8s.yml",
-                                        },
-                                    },
-                                    format = {
-                                        enable = true,
-                                    },
-                                },
-                            },
-                        })
-                    end,
-                    dockerls = function()
-                        require("lsp-zero").configure("dockerls", {
-                            settings = {
-                                docker = {
-                                    languages = {
-                                        dockerfile = { enabled = true },
-                                    },
-                                },
-                            },
-                        })
-                    end,
+                        },
+                        format = {
+                            enable = true,
+                        },
+                    },
+                },
+            })
+
+            vim.lsp.config("dockerls", {
+                settings = {
+                    docker = {
+                        languages = {
+                            dockerfile = { enabled = true },
+                        },
+                    },
                 },
             })
 
@@ -233,8 +235,10 @@ require("lazy").setup({
                 vim.keymap.set("n", "gK", vim.lsp.buf.signature_help, { buffer = bufnr, desc = "Signature help" })
                 vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
                 vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
-                vim.keymap.set("n", "<leader>ds", vim.lsp.buf.document_symbol, { buffer = bufnr, desc = "Document symbols" })
-                vim.keymap.set("n", "<leader>ws", vim.lsp.buf.workspace_symbol, { buffer = bufnr, desc = "Workspace symbols" })
+                vim.keymap.set("n", "<leader>ds", vim.lsp.buf.document_symbol,
+                    { buffer = bufnr, desc = "Document symbols" })
+                vim.keymap.set("n", "<leader>ws", vim.lsp.buf.workspace_symbol,
+                    { buffer = bufnr, desc = "Workspace symbols" })
             end)
 
             lsp.setup()
@@ -395,11 +399,17 @@ require("lazy").setup({
             })
 
             local cmp = require("cmp")
+            -- registers the nvim_lsp completion source on each InsertEnter;
+            -- without this no LSP suggestions ever reach nvim-cmp.
+            require("cmp_nvim_lsp").setup()
             local luasnip = require("luasnip")
 
             require("luasnip.loaders.from_lua").load({
                 paths = vim.fn.stdpath("config") .. "/lua/prime/snippets",
             })
+            -- docker-compose files use the "yaml.docker-compose" filetype;
+            -- let them also use the plain "yaml" snippet library.
+            luasnip.filetype_extend("yaml.docker-compose", { "yaml" })
 
             vim.opt.completeopt = { "menu", "menuone", "noselect" }
 
@@ -452,6 +462,7 @@ require("lazy").setup({
                 preselect = cmp.PreselectMode.Item,
                 sources = cmp.config.sources({
                     { name = "nvim_lsp" },
+                    { name = "codeium" },
                     { name = "buffer" },
                     { name = "path" },
                     { name = "luasnip" },
@@ -505,11 +516,20 @@ require("lazy").setup({
             local wk = require("which-key")
             wk.setup({})
             wk.add({
-                { "gj", desc = "Next diagnostic" },
-                { "gk", desc = "Previous diagnostic" },
+                { "gj",        desc = "Next diagnostic" },
+                { "gk",        desc = "Previous diagnostic" },
                 { "<leader>v", group = "lsp" },
                 { "<leader>h", group = "hunks / terminal" },
             })
+        end,
+    },
+
+    {
+        "github/copilot.vim",
+        event = "InsertEnter",
+        config = function()
+            vim.g.copilot_no_tab_map = true
+            vim.keymap.set("i", "<C-l>", 'copilot#Accept("\\<CR>")', { expr = true, replace_keycodes = false })
         end,
     },
 })
