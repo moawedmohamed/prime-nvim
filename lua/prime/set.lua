@@ -23,6 +23,8 @@ opt.incsearch = true
 opt.termguicolors = true
 opt.background = "dark"
 
+opt.guicursor = "n-v-c-sm:block,i-ci-ve:block,r-cr-o:block"
+
 opt.undolevels = 10000
 
 opt.scrolloff = 8

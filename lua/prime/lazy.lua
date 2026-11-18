@@ -11,6 +11,23 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- Treat Avalonia XAML (*.axaml) as XML so treesitter highlighting and the
+-- XML language server (lemminx) attach to it. Neovim has no built-in
+-- mapping for the .axaml extension.
+--
+-- Go HTML templates use the "html" filetype so the HTML, CSS, Tailwind,
+-- Emmet and HTMX language servers all attach. gopls is configured for the
+-- "html" filetype in lua/prime/lsp.lua as well.
+vim.filetype.add({
+    pattern = {
+        [".*%.axaml"] = "xml",
+        [".*%.gohtml"] = "html",
+        [".*%.gohtmltmpl"] = "html",
+        [".*%.tmpl"] = "gotmpl",
+        [".*%.gotmpl"] = "gotmpl",
+    },
+})
+
 require("lazy").setup({
     {
         "rose-pine/neovim",
@@ -27,6 +44,9 @@ require("lazy").setup({
                     SignColumn = { bg = "#000000" },
                     StatusLine = { bg = "#000000" },
                     TelescopeNormal = { bg = "#000000" },
+                    ["@type"] = { fg = "#ea9a97" },
+                    ["@type.builtin"] = { fg = "#ea9a97" },
+                    ["@type.definition"] = { fg = "#ea9a97" },
                 },
             })
             vim.cmd("colorscheme rose-pine")
@@ -44,6 +64,30 @@ require("lazy").setup({
     },
 
     {
+        -- VS Code-like auto-closing/renaming of XML/XAML/HTML tags.
+        -- .axaml uses the "xml" filetype, which this plugin supports.
+        "windwp/nvim-ts-autotag",
+        event = { "BufReadPre", "BufNewFile" },
+        dependencies = { "nvim-treesitter/nvim-treesitter" },
+        config = function()
+            require("nvim-ts-autotag").setup({
+                opts = {
+                    enable_close = true,
+                    enable_rename = true,
+                    enable_close_on_slash = true,
+                },
+                per_filetype = {
+                    xml = {
+                        enable_close = true,
+                        enable_rename = true,
+                        enable_close_on_slash = true,
+                    },
+                },
+            })
+        end,
+    },
+
+    {
         "nvim-telescope/telescope.nvim",
         tag = "0.1.5",
         dependencies = { "nvim-lua/plenary.nvim" },
@@ -54,6 +98,13 @@ require("lazy").setup({
             vim.keymap.set("n", "<leader>ps", function()
                 builtin.grep_string({ search = vim.fn.input("Grep > ") })
             end)
+            vim.keymap.set("n", "<leader>pa", function()
+                builtin.find_files({
+                    hidden = true,
+                    no_ignore = true,
+                    no_ignore_parent = true,
+                })
+            end, { desc = "Find all files (incl. hidden + ignored)" })
         end
     },
 
@@ -63,7 +114,20 @@ require("lazy").setup({
         build = ":TSUpdate",
         config = function()
             require("nvim-treesitter.configs").setup({
-                ensure_installed = { "lua", "go", "typescript", "c", "rust", "yaml" },
+                ensure_installed = {
+                    "lua",
+                    "go",
+                    "gotmpl",
+                    "html",
+                    "css",
+                    "javascript",
+                    "typescript",
+                    "c",
+                    "rust",
+                    "yaml",
+                    "c_sharp",
+                    "xml",
+                },
                 auto_install = true,
                 highlight = { enable = true },
                 indent = { enable = true },
@@ -113,12 +177,10 @@ require("lazy").setup({
     },
 
     {
-        "VonHeikemen/lsp-zero.nvim",
-        branch = "v3.x",
+        "neovim/nvim-lspconfig",
         dependencies = {
-            "williamboman/mason.nvim",
+            { "williamboman/mason.nvim", config = true },
             "williamboman/mason-lspconfig.nvim",
-            "neovim/nvim-lspconfig",
             "hrsh7th/nvim-cmp",
             "hrsh7th/cmp-nvim-lsp",
             "hrsh7th/cmp-buffer",
@@ -127,337 +189,8 @@ require("lazy").setup({
             "L3MON4D3/LuaSnip",
         },
         config = function()
-            local lsp = require("lsp-zero").preset({
-                name = "recommended",
-            })
-
-            require("mason").setup({})
-            require("mason-lspconfig").setup({
-                ensure_installed = {
-                    -- Go
-                    "gopls",
-                    -- frontend / web
-                    "ts_ls",
-                    "html",
-                    "cssls",
-                    "tailwindcss",
-                    "eslint",
-                    "jsonls",
-                    "emmet_language_server",
-                    "prismals",
-                    -- devops
-                    "dockerls",
-                    "docker_compose_language_service",
-                    -- others
-                    "lua_ls",
-                    "rust_analyzer",
-                    "yamlls",
-                },
-                handlers = {
-                    require("lsp-zero").default_setup,
-                    gopls = function()
-                        require("lsp-zero").configure("gopls", {
-                            settings = {
-                                gopls = {
-                                    usePlaceholders = true,
-                                    staticcheck = true,
-                                    completeUnimported = true,
-                                    gofumpt = true,
-                                    codelenses = {
-                                        gc_details = false,
-                                        generate = true,
-                                        regenerate_cgo = true,
-                                        run_govulncheck = true,
-                                        test = true,
-                                        tidy = true,
-                                        upgrade_dependency = true,
-                                        vendor = true,
-                                    },
-                                    hints = {
-                                        assignVariableTypes = true,
-                                        compositeLiteralFields = true,
-                                        compositeLiteralTypes = true,
-                                        constantValues = true,
-                                        functionTypeParameters = true,
-                                        parameterNames = true,
-                                        rangeVariableTypes = true,
-                                    },
-                                    analyses = {
-                                        unusedparams = true,
-                                        shadow = true,
-                                    },
-                                },
-                            },
-                        })
-                    end,
-                    yamlls = function()
-                        require("lsp-zero").configure("yamlls", {
-                            settings = {
-                                yaml = {
-                                    schemas = {
-                                        ["https://json.schemastore.org/github-workflow.json"] = ".github/workflows/*.{yml,yaml}",
-                                        ["https://json.schemastore.org/github-action.json"] = ".github/actions/*.{yml,yaml}",
-                                        ["https://json.schemastore.org/docker-compose.json"] = "docker-compose*.{yml,yaml}",
-                                        ["https://json.schemastore.org/kustomization.json"] = "kustomization.{yml,yaml}",
-                                        ["https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.29.0-standalone-strict/all.json"] = {
-                                            "*.k8s.yaml",
-                                            "*.k8s.yml",
-                                        },
-                                    },
-                                    format = {
-                                        enable = true,
-                                    },
-                                },
-                            },
-                        })
-                    end,
-                    dockerls = function()
-                        require("lsp-zero").configure("dockerls", {
-                            settings = {
-                                docker = {
-                                    languages = {
-                                        dockerfile = { enabled = true },
-                                    },
-                                },
-                            },
-                        })
-                    end,
-                },
-            })
-
-            lsp.on_attach(function(client, bufnr)
-                lsp.default_keymaps({ buffer = bufnr })
-                local opts = { buffer = bufnr }
-                vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-                vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-                vim.keymap.set("n", "gK", vim.lsp.buf.signature_help, { buffer = bufnr, desc = "Signature help" })
-                vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
-                vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
-                vim.keymap.set("n", "<leader>ds", vim.lsp.buf.document_symbol, { buffer = bufnr, desc = "Document symbols" })
-                vim.keymap.set("n", "<leader>ws", vim.lsp.buf.workspace_symbol, { buffer = bufnr, desc = "Workspace symbols" })
-            end)
-
-            lsp.setup()
-
-            -- docker-compose files use the dedicated compose language server,
-            -- which only starts for the custom 'yaml.docker-compose' filetype.
-            vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
-                pattern = {
-                    "docker-compose*.yaml",
-                    "docker-compose*.yml",
-                    "compose*.yaml",
-                    "compose*.yml",
-                },
-                callback = function()
-                    vim.bo.filetype = "yaml.docker-compose"
-                end,
-            })
-
-            -- Diagnostics: inline virtual text, coloured underline, signs and
-            -- a rounded floating window. update_in_insert = false keeps the
-            -- buffer calm while typing.
-            vim.diagnostic.config({
-                virtual_text = {
-                    prefix = "●",
-                    source = "if_many",
-                    spacing = 2,
-                },
-                underline = true,
-                signs = {
-                    text = {
-                        [vim.diagnostic.severity.ERROR] = "E",
-                        [vim.diagnostic.severity.WARN] = "W",
-                        [vim.diagnostic.severity.INFO] = "I",
-                        [vim.diagnostic.severity.HINT] = "H",
-                    },
-                },
-                severity_sort = true,
-                update_in_insert = false,
-                float = {
-                    border = "rounded",
-                    source = true,
-                    header = "",
-                    prefix = "",
-                },
-            })
-
-            -- NOTE: the 'd' prefix is intentionally avoided here -- remap.lua
-            -- maps <leader>d to the delete operator, so a paused <leader>d
-            -- would start deleting instead of waiting for a diagnostic key.
-            local function diag_goto(count)
-                if #vim.diagnostic.get(0) == 0 then
-                    vim.notify("No diagnostics in this buffer", vim.log.levels.INFO)
-                    return
-                end
-                vim.diagnostic.jump({ count = count, float = true })
-            end
-
-            vim.keymap.set("n", "gj", function()
-                diag_goto(1)
-            end, { desc = "Next diagnostic" })
-            vim.keymap.set("n", "gk", function()
-                diag_goto(-1)
-            end, { desc = "Previous diagnostic" })
-            vim.keymap.set("n", "<leader>cd", function()
-                local line = vim.api.nvim_win_get_cursor(0)[1] - 1
-                if #vim.diagnostic.get(0, { lnum = line }) == 0 then
-                    vim.notify("No diagnostic on this line", vim.log.levels.INFO)
-                else
-                    vim.diagnostic.open_float()
-                end
-            end, { desc = "Show diagnostic (float)" })
-
-            local diag_win = nil
-            local diag_buf = nil
-
-            local function close_diag()
-                if diag_win and vim.api.nvim_win_is_valid(diag_win) then
-                    vim.api.nvim_win_close(diag_win, true)
-                end
-                diag_win, diag_buf = nil, nil
-            end
-
-            local function toggle_diag()
-                if diag_win and vim.api.nvim_win_is_valid(diag_win) then
-                    close_diag()
-                    return
-                end
-                local diags = vim.diagnostic.get(0)
-                if #diags == 0 then
-                    vim.notify("No diagnostics")
-                    return
-                end
-                local severities = { "ERROR", "WARN", "INFO", "HINT" }
-                local lines = {}
-                for _, d in ipairs(diags) do
-                    local sev = severities[d.severity] or "?"
-                    local msg = d.message:gsub("[\r\n]+", " ")
-                    table.insert(lines, string.format(
-                        "%s %d:%d  %s",
-                        sev, d.lnum + 1, d.col + 1, msg
-                    ))
-                end
-                diag_buf = vim.api.nvim_create_buf(false, true)
-                vim.api.nvim_buf_set_lines(diag_buf, 0, -1, false, lines)
-                local width = vim.api.nvim_win_get_width(0)
-                local height = math.min(#lines + 2, vim.api.nvim_win_get_height(0) - 4)
-                local opts = {
-                    relative = "editor",
-                    row = 1,
-                    col = 0,
-                    width = math.min(width - 4, 100),
-                    height = height,
-                    style = "minimal",
-                    border = "rounded",
-                }
-                diag_win = vim.api.nvim_open_win(diag_buf, false, opts)
-                vim.api.nvim_buf_set_keymap(diag_buf, "n", "q", "", {
-                    callback = close_diag,
-                })
-                vim.api.nvim_buf_set_keymap(diag_buf, "n", "<Enter>", "", {
-                    callback = function()
-                        local line = vim.api.nvim_win_get_cursor(diag_win)[1] - 1
-                        local target = diags[line + 1]
-                        if target then
-                            close_diag()
-                            vim.api.nvim_win_set_cursor(0, { target.lnum + 1, target.col })
-                        end
-                    end,
-                })
-            end
-
-            vim.keymap.set("n", "<leader>xx", toggle_diag)
-
-            vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
-                callback = function()
-                    if diag_win then
-                        close_diag()
-                    end
-                end,
-            })
-
-            vim.api.nvim_create_autocmd("BufWritePre", {
-                callback = function()
-                    local clients = vim.lsp.get_clients({ bufnr = 0 })
-                    if vim.bo.modifiable and next(clients) ~= nil then
-                        vim.lsp.buf.format({ bufnr = 0, async = false })
-                        if vim.bo.filetype == "go" then
-                            pcall(vim.lsp.buf.code_action, {
-                                context = {
-                                    only = { "source.organizeImports" },
-                                    diagnostics = {},
-                                },
-                                apply = true,
-                            })
-                        end
-                    end
-                end,
-            })
-
-            local cmp = require("cmp")
-            local luasnip = require("luasnip")
-
-            require("luasnip.loaders.from_lua").load({
-                paths = vim.fn.stdpath("config") .. "/lua/prime/snippets",
-            })
-
-            vim.opt.completeopt = { "menu", "menuone", "noselect" }
-
-            cmp.setup({
-                snippet = {
-                    expand = function(args)
-                        luasnip.lsp_expand(args.body)
-                    end,
-                },
-                mapping = cmp.mapping.preset.insert({
-                    ["<C-Space>"] = cmp.mapping.complete(),
-                    ["<C-@>"] = cmp.mapping.complete(),
-                    ["<C-e>"] = cmp.mapping.abort(),
-                    ["<CR>"] = cmp.mapping(function(fallback)
-                        if cmp.visible() then
-                            cmp.confirm({ select = true })
-                        elseif luasnip.expandable() then
-                            luasnip.expand()
-                        else
-                            fallback()
-                        end
-                    end, { "i", "s" }),
-                    ["<C-n>"] = cmp.mapping.select_next_item({ behavior = "insert" }),
-                    ["<C-p>"] = cmp.mapping.select_prev_item({ behavior = "insert" }),
-                    ["<Down>"] = cmp.mapping.select_next_item({ behavior = "insert" }),
-                    ["<Up>"] = cmp.mapping.select_prev_item({ behavior = "insert" }),
-                    ["<Tab>"] = cmp.mapping(function(fallback)
-                        if cmp.visible() then
-                            cmp.select_next_item({ behavior = "insert" })
-                        elseif luasnip.expand_or_jumpable() then
-                            luasnip.expand_or_jump()
-                        else
-                            fallback()
-                        end
-                    end, { "i", "s" }),
-                    ["<S-Tab>"] = cmp.mapping(function(fallback)
-                        if cmp.visible() then
-                            cmp.select_prev_item({ behavior = "insert" })
-                        elseif luasnip.jumpable(-1) then
-                            luasnip.jump(-1)
-                        else
-                            fallback()
-                        end
-                    end, { "i", "s" }),
-                }),
-                completion = {
-                    autocomplete = { cmp.TriggerEvent.TextChanged },
-                    keyword_length = 1,
-                },
-                preselect = cmp.PreselectMode.Item,
-                sources = cmp.config.sources({
-                    { name = "nvim_lsp" },
-                    { name = "buffer" },
-                    { name = "path" },
-                    { name = "luasnip" },
-                }),
-            })
-        end
+            require("prime.lsp").setup()
+        end,
     },
 
     {
@@ -491,6 +224,49 @@ require("lazy").setup({
     },
 
     {
+        "zbirenbaum/copilot.lua",
+        cmd = "Copilot",
+        event = "InsertEnter",
+        config = function()
+            require("copilot").setup({
+                suggestion = {
+                    enabled = true,
+                    auto_trigger = true,
+                    keymap = {
+                        accept = "<C-l>",
+                        next = "<C-j>",
+                        prev = "<C-k>",
+                        dismiss = "<C-h>",
+                    },
+                },
+                panel = { enabled = true },
+            })
+        end,
+    },
+
+    {
+        "zbirenbaum/copilot-cmp",
+        dependencies = { "zbirenbaum/copilot.lua" },
+        config = function()
+            require("copilot_cmp").setup()
+        end,
+    },
+
+    {
+        "ThePrimeagen/vim-be-good",
+        keys = {
+            {
+                "<leader>vg",
+                function()
+                    vim.cmd("enew")
+                    vim.cmd("VimBeGood")
+                end,
+                desc = "Vim Be Good (practice motions)",
+            },
+        },
+    },
+
+    {
         "numToStr/Comment.nvim",
         event = { "BufReadPost", "BufNewFile" },
         config = function()
@@ -505,8 +281,8 @@ require("lazy").setup({
             local wk = require("which-key")
             wk.setup({})
             wk.add({
-                { "gj", desc = "Next diagnostic" },
-                { "gk", desc = "Previous diagnostic" },
+                { "gj",        desc = "Next diagnostic" },
+                { "gk",        desc = "Previous diagnostic" },
                 { "<leader>v", group = "lsp" },
                 { "<leader>h", group = "hunks / terminal" },
             })

@@ -1,0 +1,85 @@
+local ls = require("luasnip")
+local s = ls.snippet
+local t = ls.text_node
+local i = ls.insert_node
+
+return {
+  s("html5", {
+    t({ "<!DOCTYPE html>", '<html lang="en">', "<head>", '    <meta charset="UTF-8">', '    <meta name="viewport" content="width=device-width, initial-scale=1.0">', "    <title>" }),
+    i(1, "Title"),
+    t({ "</title>", '    <link rel="stylesheet" href="' }),
+    i(2, "/css/index.css"),
+    t({ '">', "</head>", "<body>", "    " }),
+    i(0),
+    t({ "", "</body>", "</html>" }),
+  }),
+  s("doctype", { t("<!DOCTYPE html>") }),
+  s("viewport", { t('<meta name="viewport" content="width=device-width, initial-scale=1.0">') }),
+  s("linkcss", { t('<link rel="stylesheet" href="'), i(1, "/css/index.css"), t('">') }),
+  s("scriptsrc", { t('<script src="'), i(1, "/js/app.js"), t('"></script>') }),
+  s("a", { t('<a href="'), i(1, "#"), t('">'), i(2, "link"), t("</a>") }),
+  s("img", { t('<img src="'), i(1, "/images/image.png"), t('" alt="'), i(2, "description"), t('">') }),
+  s("form", {
+    t('<form action="'),
+    i(1, "/endpoint"),
+    t('" method="'),
+    i(2, "post"),
+    t({ '">', "    " }),
+    i(0),
+    t({ "", "</form>" }),
+  }),
+  s("input", {
+    t('<input type="'),
+    i(1, "text"),
+    t('" name="'),
+    i(2, "name"),
+    t('" id="'),
+    i(3, "id"),
+    t('">'),
+  }),
+  s("button", {
+    t('<button type="'),
+    i(1, "button"),
+    t('">'),
+    i(2, "Button"),
+    t("</button>"),
+  }),
+  s("div", {
+    t('<div class="'),
+    i(1, ""),
+    t({ '">', "    " }),
+    i(0),
+    t({ "", "</div>" }),
+  }),
+  s("ul", {
+    t({ "<ul>", "    <li>" }),
+    i(1, "item"),
+    t({ "</li>", "</ul>" }),
+  }),
+  s("table", {
+    t({ "<table>", "    <thead>", "        <tr>", "            <th>" }),
+    i(1, "Header"),
+    t({ "</th>", "        </tr>", "    </thead>", "    <tbody>", "        <tr>", "            <td>" }),
+    i(2, "Cell"),
+    t({ "</td>", "        </tr>", "    </tbody>", "</table>" }),
+  }),
+  s("hxget", {
+    t('hx-get="'),
+    i(1, "/endpoint"),
+    t('" hx-target="'),
+    i(2, "#target"),
+    t('" hx-swap="'),
+    i(3, "innerHTML"),
+    t('"'),
+  }),
+  s("hxpost", {
+    t('hx-post="'),
+    i(1, "/endpoint"),
+    t('" hx-target="'),
+    i(2, "#target"),
+    t('" hx-swap="'),
+    i(3, "innerHTML"),
+    t('"'),
+  }),
+  s("hxtrigger", { t('hx-trigger="'), i(1, "click"), t('"') }),
+}
